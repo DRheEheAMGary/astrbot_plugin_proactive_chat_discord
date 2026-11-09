@@ -75,6 +75,8 @@ class EventHandlers:
     # ------------------------------------------------------------------
     async def on_friend_message(self, event: AstrMessageEvent) -> None:
         """处理私聊消息：记录时间、取消调度、重置计数并重新排期。"""
+        if not self.plugin.is_plugin_enabled():
+            return
         if not event.get_messages():
             return
 
@@ -170,6 +172,8 @@ class EventHandlers:
 
         会先剔除 Bot 自身消息，避免把机器人发言误判为用户活跃。
         """
+        if not self.plugin.is_plugin_enabled():
+            return
         if not event.get_messages():
             return
 

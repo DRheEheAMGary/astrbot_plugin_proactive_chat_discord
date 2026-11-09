@@ -31,7 +31,7 @@ class TelemetryManager:
     _ENCODED_APP_KEY = "dGtfTUlMdzk5NTZ4aGNZTm54RzBzSHZzdFl3VjhnN0YtUmc="
     _APP_KEY = base64.b64decode(_ENCODED_APP_KEY).decode()
     # 插件名用于定位插件私有数据目录，并持久化实例级匿名 ID。
-    _PLUGIN_NAME = "astrbot_plugin_proactive_chat"
+    _PLUGIN_NAME = "astrbot_plugin_proactive_chat_discord"
     # 匹配统一消息来源 UMO，避免错误日志或异常文本把真实会话标识直接上传到遥测平台。
     _UMO_PATTERN = re.compile(
         r"(?P<umo>[A-Za-z0-9_.-]+:(?:FriendMessage|PrivateMessage|GroupMessage|GuildMessage):[^\s,'\"]+)"
@@ -520,7 +520,7 @@ class TelemetryManager:
         stack = re.sub(r"[A-Za-z]:\\Users\\[^\\]+\\", r"<USER_HOME>\\", stack)
         stack = re.sub(r"/(?:home|Users|root)/[^/]+/", r"<USER_HOME>/", stack)
         # 插件内部路径统一折叠成相对占位，保留定位意义但隐藏真实安装位置。
-        stack = re.sub(r".*astrbot_plugin_proactive_chat[/\\]", r"<PLUGIN>/", stack)
+        stack = re.sub(r".*astrbot_plugin_proactive_chat_discord[/\\]", r"<PLUGIN>/", stack)
         # site-packages 同样做路径折叠，避免把环境细节大量上传到遥测平台。
         stack = re.sub(r".*site-packages[/\\]", r"<SITE_PACKAGES>/", stack)
         # 对其他 Windows / Unix 绝对路径做保底折叠，减少非用户目录路径泄露。

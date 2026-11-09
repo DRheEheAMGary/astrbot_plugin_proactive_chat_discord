@@ -171,8 +171,10 @@ class ApiRoutes:
             }
             # 返回所有可编辑分组，保证前端渲染的字段与服务端保存范围一致。
             return {
+                "enabled": bool(self.config.get("enabled", False)),
                 "friend_settings": _config_group("friend_settings"),
                 "group_settings": _config_group("group_settings"),
+                "discord_settings": _config_group("discord_settings"),
                 "web_admin": web_admin,
                 "notification_settings": _config_group("notification_settings"),
                 "telemetry_config": _config_group("telemetry_config"),
@@ -196,8 +198,10 @@ class ApiRoutes:
         @app.post("/api/config")
         async def update_config(payload: dict[str, Any]):
             allowed_keys = {
+                "enabled",
                 "friend_settings",
                 "group_settings",
+                "discord_settings",
                 "web_admin",
                 "notification_settings",
                 "telemetry_config",
@@ -207,7 +211,9 @@ class ApiRoutes:
             invalid_keys = [
                 key
                 for key in sorted(allowed_keys)
-                if key in payload and not isinstance(payload[key], dict)
+                if key in payload
+                and key != "enabled"
+                and not isinstance(payload[key], dict)
             ]
             if invalid_keys:
                 return JSONResponse(
@@ -215,6 +221,13 @@ class ApiRoutes:
                         "error": "配置分组必须是对象",
                         "invalid_keys": invalid_keys,
                     },
+                    status_code=400,
+                )
+
+            # 总开关必须是布尔值。
+            if "enabled" in payload and not isinstance(payload["enabled"], bool):
+                return JSONResponse(
+                    {"error": "enabled 必须是布尔值", "invalid_keys": ["enabled"]},
                     status_code=400,
                 )
 
@@ -233,7 +246,9 @@ class ApiRoutes:
             for key in allowed_keys:
                 if key not in payload:
                     continue
-                if key == "web_admin":
+                if key == "enabled":
+                    self.config["enabled"] = bool(payload["enabled"])
+                elif key == "web_admin":
                     # 走 _config_group。
                     old = _config_group("web_admin")
                     old.update(payload.get("web_admin", {}))

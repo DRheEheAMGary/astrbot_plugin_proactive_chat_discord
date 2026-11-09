@@ -118,6 +118,15 @@ class ConfigService:
         )
         candidates = {session_id, normalized_session_id, target_id}
 
+        # Discord 衍生版：配置里可能填的是用户 ID，而运行期 UMO 第三段是
+        # DM 频道 ID；把原始配置值反查出来一起参与匹配。
+        discord_service = getattr(self.plugin, "discord_target_service", None)
+        if discord_service is not None:
+            try:
+                candidates.update(discord_service.raw_keys_for_umo(normalized_session_id))
+            except Exception:
+                pass
+
         if any(candidate in session_list for candidate in candidates):
             config_copy = copy.deepcopy(settings)
             config_copy["_session_type"] = session_type

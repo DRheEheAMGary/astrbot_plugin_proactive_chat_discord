@@ -27,6 +27,8 @@ class LifecycleService:
 
     def __init__(self, plugin: Any) -> None:
         self.plugin = plugin
+        self._config_watch_task: asyncio.Task | None = None
+        self._last_enabled_state: bool | None = None
 
     async def initialize(self) -> None:
         """插件的异步初始化函数。
@@ -82,8 +84,13 @@ class LifecycleService:
         plugin.scheduler = AsyncIOScheduler(timezone=plugin.timezone)
         plugin.scheduler.start()
 
-        # 平台就绪则立即恢复定时任务，否则推迟到 AstrBot 加载完成。
-        if self.are_platforms_available():
+        # 默认关闭：总开关未开启时不恢复/创建任何主动消息任务。
+        self._last_enabled_state = plugin.is_plugin_enabled()
+        if not self._last_enabled_state:
+            logger.info(
+                "[主动消息] 插件总开关关闭（enabled=false），本次启动不会创建/恢复任何主动消息任务喵。"
+            )
+        elif self.are_platforms_available():
             logger.debug("[主动消息] 平台适配器已就绪，立即恢复定时任务喵。")
             try:
                 await self.finalize_startup()
@@ -102,6 +109,9 @@ class LifecycleService:
             plugin._startup_task = asyncio.create_task(
                 self.wait_for_platforms_then_finalize()
             )
+
+        # 监听总开关热切换（AstrBot/WebUI 保存配置后可即时生效）。
+        self._config_watch_task = asyncio.create_task(self._watch_enabled_state())
 
         try:
             if plugin.notification_center:
@@ -148,6 +158,9 @@ class LifecycleService:
         allow_retry 为 True 时不锁定完成标记，允许后续再次尝试。
         """
         plugin = self.plugin
+        if not plugin.is_plugin_enabled():
+            logger.info("[主动消息] 插件总开关关闭，跳过调度初始化喵。")
+            return
         if plugin._startup_finalized or getattr(plugin, "_terminating", False):
             return
 
@@ -162,6 +175,13 @@ class LifecycleService:
 
             if getattr(plugin, "_terminating", False):
                 return
+
+            discord_service = getattr(plugin, "discord_target_service", None)
+            if discord_service is not None:
+                try:
+                    await discord_service.prepare_startup_targets()
+                except Exception as exc:
+                    logger.warning(f"[主动消息] Discord 目标解析失败喵: {exc}")
 
             self.restore_last_message_times()
 
@@ -243,6 +263,57 @@ class LifecycleService:
                 f"[主动消息] 延迟恢复定时任务失败喵:\n{traceback.format_exc()}"
             )
 
+    async def _watch_enabled_state(self) -> None:
+        """轮询总开关变化：enabled=false 时清理运行态，enabled=true 时恢复调度。"""
+        plugin = self.plugin
+        try:
+            while True:
+                await asyncio.sleep(10)
+                if getattr(plugin, "_terminating", False):
+                    return
+                current = plugin.is_plugin_enabled()
+                previous = self._last_enabled_state
+                self._last_enabled_state = current
+                if previous == current:
+                    continue
+                if current:
+                    logger.info("[主动消息] 检测到总开关开启，开始恢复主动消息调度喵。")
+                    try:
+                        plugin._startup_finalized = False
+                        if self.are_platforms_available():
+                            await self.finalize_startup(allow_retry=True)
+                    except Exception as exc:
+                        logger.error(f"[主动消息] 总开关开启后恢复调度失败喵: {exc}")
+                else:
+                    logger.info("[主动消息] 检测到总开关关闭，清理所有主动消息任务喵。")
+                    await self._stop_runtime_jobs()
+        except asyncio.CancelledError:
+            raise
+        except Exception as exc:
+            logger.error(f"[主动消息] 总开关监听循环异常喵: {exc}")
+
+    async def _stop_runtime_jobs(self) -> None:
+        """清理调度器任务与所有 asyncio 计时器（保留持久化状态以便恢复）。"""
+        plugin = self.plugin
+        try:
+            if getattr(plugin, "scheduler", None) and plugin.scheduler.running:
+                jobs = plugin.scheduler.get_jobs()
+                plugin.scheduler.remove_all_jobs()
+                logger.info(f"[主动消息] 已清理 {len(jobs)} 个调度任务喵。")
+        except Exception as exc:
+            logger.warning(f"[主动消息] 清理调度任务失败喵: {exc}")
+        for name, timers in (("群聊沉默", plugin.group_timers), ("自动触发", plugin.auto_trigger_timers)):
+            count = len(timers)
+            for timer in list(timers.values()):
+                try:
+                    timer.cancel()
+                except Exception:
+                    pass
+            timers.clear()
+            if count:
+                logger.info(f"[主动消息] 已取消 {count} 个{name}计时器喵。")
+        plugin._startup_finalized = False
+
     async def terminate(self) -> None:
         """插件被卸载或停用时调用的清理函数。
 
@@ -254,6 +325,11 @@ class LifecycleService:
 
         # 先置位终止标记，后续流程据此提前退出。
         plugin._terminating = True
+
+        watch_task = getattr(self, "_config_watch_task", None)
+        self._config_watch_task = None
+        if watch_task and not watch_task.done():
+            watch_task.cancel()
 
         startup_task = getattr(plugin, "_startup_task", None)
         plugin._startup_task = None

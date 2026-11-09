@@ -21,6 +21,12 @@
     const CONFIG_ICONS = {
         friend_settings: '👤',
         group_settings: '👥',
+        discord_settings: '🎮',
+        enabled: '✅',
+        platform_id: '🤖',
+        resolve_targets_on_startup: '🚀',
+        dm_rate_limit_seconds: '⏱️',
+        max_send_chars: '📏',
         web_admin: '🌐',
         notification_settings: '🔔',
         telemetry_config: '📡',
@@ -97,8 +103,10 @@
 
     // 全局配置保存时提交的分组白名单必须与后端保持一致。
     const GLOBAL_CONFIG_KEYS = Object.freeze([
+        'enabled',
         'friend_settings',
         'group_settings',
+        'discord_settings',
         'web_admin',
         'notification_settings',
         'telemetry_config',

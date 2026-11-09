@@ -385,6 +385,24 @@ class SenderService:
         plugin = self.plugin
         if not components:
             return False
+        if not plugin.is_plugin_enabled():
+            logger.debug("[主动消息] 插件总开关关闭，跳过发送喵。")
+            return False
+
+        # Discord 衍生版：DM/频道消息优先用 Discord client 直发
+        # （AstrBot 的 send_by_session 依赖频道缓存，DM 未必已缓存）。
+        discord_service = getattr(plugin, "discord_target_service", None)
+        if discord_service is not None and discord_service.is_discord_session(session_id):
+            try:
+                if await discord_service.send_chain(session_id, components):
+                    return True
+                logger.warning(
+                    "[主动消息] Discord 直发未成功，尝试 AstrBot 发送链路兜底喵。"
+                )
+            except Exception as exc:
+                logger.warning(
+                    f"[主动消息] Discord 直发异常，尝试 AstrBot 兜底喵: {exc}"
+                )
 
         chain = MessageChain(list(components))
         parsed = plugin.session_service.parse_session_id(session_id)

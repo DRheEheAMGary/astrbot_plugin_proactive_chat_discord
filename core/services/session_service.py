@@ -123,6 +123,19 @@ class SessionService:
         plugin = self.plugin
         type_keyword = "Friend" if is_friend_type(msg_type) else "Group"
 
+        # Discord 衍生版：优先使用 Discord 目标解析服务缓存/生成的规范 UMO。
+        # 私聊的 UMO 第三段必须是 DM 频道 ID，不能直接用用户 ID。
+        discord_service = getattr(plugin, "discord_target_service", None)
+        if discord_service is not None:
+            if preferred_platform and str(preferred_platform).lower() == "discord":
+                mapped = discord_service.canonical_umo_for(msg_type, str(target_id))
+                if mapped:
+                    return mapped
+                return f"discord:{msg_type}:{target_id}"
+            mapped = discord_service.canonical_umo_for(msg_type, str(target_id))
+            if mapped and (not preferred_platform or preferred_platform == "discord"):
+                return mapped
+
         active_insts = {
             p.meta().id: p
             for p in iter_active_platform_instances(plugin.context.platform_manager)

@@ -154,6 +154,8 @@ class FlowOrchestrator:
         allowed 表示通过校验。
         """
         plugin = self.plugin
+        if not plugin.is_plugin_enabled():
+            return False, "plugin_disabled"
         session_config = plugin.config_service.get_session_config(session_id)
         if not session_config:
             return False, "session_config_missing"

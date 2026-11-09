@@ -1,24 +1,16 @@
-name: "astrbot_plugin_proactive_chat"
-display_name: "主动消息 (Proactive Chat)"
-author: "DBJD-CR"
-version: "v1.3.0-beta.1"
-desc: "一个能让 Bot 在私聊和群聊中发起主动消息的插件，拥有上下文感知、持久化数据、动态情绪、免打扰时段和 TTS 集成。还有独立 WebUI，可进行个性化配置。"
+name: "astrbot_plugin_proactive_chat_discord"
+display_name: "主动消息 Discord 版 (Proactive Chat Discord)"
+author: "DBJD-CR (upstream) / DRheEheAMGary (Discord fork)"
+version: "v1.3.0-discord.1"
+desc: "上游 astrbot_plugin_proactive_chat 的 Discord 衍生版：随机间隔/沉默触发、未回复 GATE、人格/历史、TTS/分段、状态持久化与 WebUI；默认关闭，安全优先。"
 repo: "https://github.com/Pancakes-Labs/astrbot_plugin_proactive_chat"
 astrbot_version: ">=4.24.0"
 support_platforms:
-  - aiocqhttp
-  - qq_official
-  - qq_official_webhook
-  - telegram
-  - wecom
-  - wecom_ai_bot
-  - weixin_oc
-  - lark
-  - dingtalk
-  - kook
+  - discord
 social_link: https://github.com/DBJD-CR
 tags:
   - 主动消息
+  - Discord
   - 拟人
-  - TTS
   - WebUI
+  - AGPL

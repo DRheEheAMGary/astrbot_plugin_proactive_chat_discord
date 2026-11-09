@@ -16,6 +16,7 @@ from astrbot.api.event import AstrMessageEvent, filter
 from astrbot.core.config.astrbot_config import AstrBotConfig
 
 from .core.adapters.event_handlers import EventHandlers
+from .core.discord.service import DiscordTargetService
 from .core.console.runtime_server import WebConsoleServer
 from .core.domain.domain_enums import TriggerSource
 from .core.pipeline.flow_orchestrator import FlowOrchestrator
@@ -33,7 +34,7 @@ from .core.store.override_store import OverrideStore
 from .utils.version_utils import get_plugin_version
 
 
-class ProactiveChatPlugin(star.Star):
+class ProactiveChatDiscordPlugin(star.Star):
     """插件的主类：装配容器 + 事件入口 + 容器级状态。"""
 
     def __init__(self, context: star.Context, config: AstrBotConfig) -> None:
@@ -46,7 +47,7 @@ class ProactiveChatPlugin(star.Star):
         self.timezone = None
 
         # 使用 StarTools 获取插件专属数据目录（Path 对象）
-        self.data_dir = star.StarTools.get_data_dir("astrbot_plugin_proactive_chat")
+        self.data_dir = star.StarTools.get_data_dir("astrbot_plugin_proactive_chat_discord")
         self.session_data_file = self.data_dir / "session_data.json"
 
         # 共享锁与持久化数据容器（data_lock 在 initialize 中初始化）
@@ -70,6 +71,9 @@ class ProactiveChatPlugin(star.Star):
         self.lifecycle_service = LifecycleService(self)
         self.event_handlers = EventHandlers(self)
         self.orchestrator = FlowOrchestrator(self)
+
+        # Discord 目标解析 / DM 发送适配服务
+        self.discord_target_service = DiscordTargetService(self)
 
         # 会话差异配置管理器
         self.session_override_manager = OverrideStore(self.data_dir)
@@ -110,6 +114,16 @@ class ProactiveChatPlugin(star.Star):
         self._cleanup_counter = 0
 
         logger.info("[主动消息] 插件实例已创建喵。")
+
+    # ==================================================================
+    # 总开关 / 生命周期
+    # ==================================================================
+    def is_plugin_enabled(self) -> bool:
+        """全局总开关（默认关闭；首次安装不会主动发送任何消息）。"""
+        value = self.config.get("enabled", False) if hasattr(self.config, "get") else False
+        if isinstance(value, bool):
+            return value
+        return str(value).strip().lower() in {"1", "true", "yes", "on"}
 
     # ==================================================================
     # 生命周期
@@ -193,7 +207,7 @@ class ProactiveChatPlugin(star.Star):
             tb = exception.__traceback__
             while tb is not None:
                 filename = tb.tb_frame.f_code.co_filename
-                if "astrbot_plugin_proactive_chat" in filename:
+                if "astrbot_plugin_proactive_chat_discord" in filename:
                     is_plugin_exception = True
                     break
                 tb = tb.tb_next

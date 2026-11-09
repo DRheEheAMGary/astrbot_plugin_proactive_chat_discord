@@ -22,12 +22,21 @@ class SchedulerService:
     def __init__(self, plugin: Any) -> None:
         self.plugin = plugin
 
+    def _plugin_enabled(self) -> bool:
+        checker = getattr(self.plugin, "is_plugin_enabled", None)
+        try:
+            return bool(checker()) if callable(checker) else False
+        except Exception:
+            return False
+
     # ------------------------------------------------------------------
     # 自动触发
     # ------------------------------------------------------------------
     async def setup_auto_trigger(self, session_id: str, silent: bool = False) -> None:
         """为指定会话设置自动主动消息触发器。"""
         plugin = self.plugin
+        if not self._plugin_enabled():
+            return
         session_id = plugin.session_service.normalize_session_id(session_id)
         session_config = plugin.config_service.get_session_config(session_id)
         if not session_config:
@@ -296,8 +305,21 @@ class SchedulerService:
     def resolve_session_id_for_config(
         self, session_id: str, session_config: dict
     ) -> str:
-        """将配置中的会话标识解析为完整 UMO。"""
+        """将配置中的会话标识解析为完整 UMO。
+
+        Discord 衍生版：配置里可能填的是用户 ID/频道 ID 或 discord UMO，
+        优先使用启动阶段解析并缓存的规范 UMO（私聊第三段为 DM 频道 ID）。
+        """
         plugin = self.plugin
+        discord_service = getattr(plugin, "discord_target_service", None)
+        if discord_service is not None:
+            try:
+                mapped = discord_service.mapped_umo(str(session_id))
+                if mapped:
+                    return mapped
+            except Exception:
+                pass
+
         parsed = plugin.session_service.parse_session_id(session_id)
         if parsed:
             return session_id
@@ -315,6 +337,9 @@ class SchedulerService:
         分别遍历私聊与群聊配置的 session_list，逐项尝试创建触发器并统计结果。
         """
         plugin = self.plugin
+        if not self._plugin_enabled():
+            logger.info("[主动消息] 插件总开关关闭（enabled=false），跳过自动主动消息触发器设置喵。")
+            return
         logger.info("[主动消息] 开始检查并设置自动主动消息触发器喵...")
 
         # 各类跳过原因分别计数，用于汇总日志。
@@ -459,6 +484,9 @@ class SchedulerService:
         会被清除而非恢复，避免产生幽灵任务。
         """
         plugin = self.plugin
+        if not self._plugin_enabled():
+            logger.info("[主动消息] 插件总开关关闭（enabled=false），跳过定时任务恢复喵。")
+            return
         restored_count = 0
         cleaned_runtime_state = 0
         current_time = time.time()
@@ -559,6 +587,8 @@ class SchedulerService:
         plugin = self.plugin
         if getattr(plugin, "_terminating", False):
             return
+        if not self._plugin_enabled():
+            return
 
         normalized_session_id = plugin.session_service.normalize_session_id(session_id)
         session_config = plugin.config_service.get_session_config(normalized_session_id)
@@ -622,6 +652,8 @@ class SchedulerService:
         先取消旧计时器（含原始键与规范键），再按配置的静默分钟数重新计时。
         """
         plugin = self.plugin
+        if not self._plugin_enabled():
+            return
         normalized_session_id = plugin.session_service.normalize_session_id(session_id)
         session_config = plugin.config_service.get_session_config(normalized_session_id)
         if not session_config or not session_config.get("enable", False):
@@ -667,6 +699,8 @@ class SchedulerService:
         """
         plugin = self.plugin
         if getattr(plugin, "_terminating", False):
+            return
+        if not self._plugin_enabled():
             return
 
         session_id = plugin.session_service.normalize_session_id(session_id)
@@ -732,6 +766,8 @@ class SchedulerService:
         """
         plugin = self.plugin
         if getattr(plugin, "_terminating", False):
+            return
+        if not self._plugin_enabled():
             return
 
         session_id = plugin.session_service.normalize_session_id(session_id)
