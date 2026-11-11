@@ -1,7 +1,7 @@
 name: "astrbot_plugin_proactive_chat_discord"
 display_name: "主动消息 Discord 版 (Proactive Chat Discord)"
 author: "DBJD-CR (upstream) / DRheEheAMGary (Discord fork)"
-version: "v1.3.0-discord.1"
+version: "v1.3.0-discord.2"
 desc: "上游 astrbot_plugin_proactive_chat 的 Discord 衍生版：随机间隔/沉默触发、未回复 GATE、人格/历史、TTS/分段、状态持久化与 WebUI；默认关闭，安全优先。"
 repo: "https://github.com/Pancakes-Labs/astrbot_plugin_proactive_chat"
 astrbot_version: ">=4.24.0"

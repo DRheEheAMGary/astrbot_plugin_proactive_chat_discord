@@ -65,8 +65,8 @@
 | `friend_settings.proactive_prompt` | 见 Schema | 主动消息提示词（支持 `{{current_time}}`、`{{unanswered_count}}`） |
 | `group_settings.*` | 群聊默认关闭 | 频道主动消息配置 |
 | `web_admin.enabled` | `true` | WebUI，默认仅 127.0.0.1 |
-| `notification_settings.enabled` | `false` | 通知中心（上游默认开启，本衍生版默认关闭） |
-| `telemetry_config.enabled` | `false` | 匿名遥测（上游默认开启，本衍生版默认关闭） |
+| `notification_settings.enabled` | `false` | 通知中心，默认关闭 |
+| `telemetry_config.enabled` | `false` | 匿名遥测，默认关闭 |
 
 ## 安装（AstrBot）
 

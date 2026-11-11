@@ -9,7 +9,7 @@
 - 本项目 fork 基线：`main` 分支 commit `554c5d07684258ab5df8b6f9edb5c8e28a7fc2a5`
   （2026-11-06，Merge PR #121），上游版本 `v1.3.0-beta.1`
 - 上游文档快照：`docs/upstream/README_EN.md`、`docs/upstream/README_JP.md`
-- 本衍生版：`astrbot_plugin_proactive_chat_discord`，版本 `v1.3.0-discord.1`
+- 本衍生版：`astrbot_plugin_proactive_chat_discord`，版本 `v1.3.0-discord.2`
 
 ## AGPL-3.0 义务
 
@@ -32,6 +32,7 @@
 7. **WebUI**：配置 API 与前端全局配置键新增 `enabled` / `discord_settings`；管理端标题改为 Discord 版；默认仍仅监听 `127.0.0.1:4100`。
 8. **文档**：README 重写为 Discord 衍生版说明；新增本文件与 `THIRD_PARTY_LICENSES.md`；上游 EN/JP 文档移入 `docs/upstream/`。
 9. **兼容性/测试**：按 AstrBot 4.29.4 做导入与行为冒烟；新增 `tests/`（fake Discord client，不连接真实账号）。
+10. **文案现状一致性（2026-11-11）**：清理对外配置说明与 README 中的历史/上游默认值对比措辞，仅文案调整，不改功能。
 
 ## 未修改 / 保留
 
